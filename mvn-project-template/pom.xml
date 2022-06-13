@@ -41,6 +41,7 @@ information regarding copyright ownership.
 
 
     <dependencies>
+	
         <!-- deeplearning4j-core: contains main functionality and neural networks -->
         <dependency>
             <groupId>org.deeplearning4j</groupId>
@@ -71,9 +72,22 @@ information regarding copyright ownership.
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
         </dependency>
+        
+        <!-- BigDataViewer -->
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>bigdataviewer-vistools</artifactId>
+			<version>1.0.0-beta-29</version>
+		</dependency>
+        
     </dependencies>
 
-
+	<repositories>
+		<repository>
+			<id>scijava.public</id>
+			<url>https://maven.scijava.org/content/groups/public</url>
+		</repository>
+	</repositories>
 
     <build>
         <plugins>

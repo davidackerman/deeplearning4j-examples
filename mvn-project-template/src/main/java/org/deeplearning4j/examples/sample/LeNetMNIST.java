@@ -33,13 +33,26 @@ import org.deeplearning4j.optimize.api.InvocationType;
 import org.deeplearning4j.optimize.listeners.EvaluativeListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import bdv.util.AxisOrder;
+import bdv.util.Bdv;
+import bdv.util.BdvFunctions;
+import net.imglib2.RandomAccess;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
+import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.real.FloatType;
+
 import java.io.File;
+import java.util.Arrays;
 
 /**
  * Created by agibsonccc on 9/16/15.
@@ -60,7 +73,29 @@ public class LeNetMNIST {
         log.info("Load data....");
         DataSetIterator mnistTrain = new MnistDataSetIterator(batchSize,true,12345);
         DataSetIterator mnistTest = new MnistDataSetIterator(batchSize,false,12345);
+        DataSet ds = mnistTrain.next();
+        
+        int[] imgDim = new int[] {28,28};
+        long[] bdvDim = new long[] {28, 28, 10};
+        Img<FloatType> bdvImg = ArrayImgs.floats(bdvDim);
+        for (int i=0; i<10; i++) {
+            INDArray img = ds.getFeatures().getRow(i).reshape(new int[] {28,28});
+            System.out.println(img.dataType());
+            RandomAccess<FloatType> bdvImgRA = bdvImg.randomAccess();
+            for(int x=0; x<img.shape()[0]; x++) {
+        	for(int y=0; y<img.shape()[1]; y++) {
+        	    bdvImgRA.setPosition(new int[] {x, y, i} );
+        	    bdvImgRA.get().set(img.getFloat(y,x));
+        	}
+            }
+        }
+        //System.out.println(Arrays.toString(img.shape()));
+        System.out.println(ds.getFeatures());
+        System.out.println("hye");
+        
+        Bdv bdv = BdvFunctions.show(bdvImg, "img", Bdv.options().is2D().axisOrder(AxisOrder.XYT));
 
+        
         /*
             Construct the neural network
          */

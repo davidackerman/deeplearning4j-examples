@@ -20,12 +20,17 @@ package org.deeplearning4j.modelimportexamples.onnx;
 
 import org.nd4j.autodiff.samediff.SameDiff;
 import org.nd4j.common.resources.Downloader;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.onnxruntime.runner.OnnxRuntimeRunner;
 import org.nd4j.samediff.frameworkimport.onnx.importer.OnnxFrameworkImporter;
 
 import java.io.File;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Note that you should run the {@link OnnxImportSave}
@@ -41,16 +46,26 @@ public class OnnxImportLoad {
     /**
      * Load the model for training/finetuning.
      */
-    public final static String MODEL_FILE_NAME = "yolov4.fb";
+    public final static String MODEL_FILE_NAME = "/groups/scicompsoft/home/ackermand/Programming/deeplearning4j-examples/python/cellmap_model.onnx";// "yolov4.fb";
 
     public static void main(String...args) throws Exception {
-        //load the imported model
+       /* //load the imported model
         SameDiff sameDiff = SameDiff.load(new File(MODEL_FILE_NAME),true);
         //print the input names
         System.out.println(sameDiff.inputs());
         //print the shape of the input so we know what to feed the model
         System.out.println(Arrays.toString(sameDiff.getVariable(sameDiff.inputs().get(0)).getShape()));
-
+*/
+	File f = new File (MODEL_FILE_NAME);
+        INDArray input = Nd4j.zeros(1,1,216,216,216);
+        OnnxRuntimeRunner onnxRuntimeRunner = OnnxRuntimeRunner.builder()
+                .modelUri(f.getAbsolutePath())
+                .build();
+        Map<String,INDArray> inputs = new LinkedHashMap<>();
+        inputs.put("input",input);
+        Map<String, INDArray> exec = onnxRuntimeRunner.exec(inputs);
+        INDArray output = exec.get("output");
+        System.out.println(output.shapeInfoToString());
     }
 
 }

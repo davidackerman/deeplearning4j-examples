@@ -5,7 +5,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.io.File;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
@@ -29,23 +31,33 @@ import bdv.util.BdvFunctions;
 import bdv.util.BdvHandle;
 import bdv.util.BdvOptions;
 import bdv.util.BdvSource;
+import bdv.util.BdvStackSource;
 import bdv.util.volatiles.SharedQueue;
+import bdv.util.volatiles.VolatileViews;
 import de.embl.cba.bdv.utils.BdvUtils;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
+import net.imglib2.Volatile;
+import net.imglib2.algorithm.lazy.Lazy;
 import net.imglib2.img.Img;
+import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.img.basictypeaccess.AccessFlags;
+import net.imglib2.img.cell.CellImgFactory;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
+import net.imglib2.view.IntervalView;
+import net.imglib2.view.Views;
 
 public class Interactive < T extends NumericType< T >, V extends NumericType<V> >{
 
     static boolean draw = false;
     static class KeyListenerDemo extends KeyAdapter {
-	
+
 	RandomAccess<UnsignedByteType> rawRA = null;
 	Bdv bdv = null;
 	BdvHandle bdvHandle = null;
@@ -58,7 +70,7 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 	}
 	@Override
 	public void keyPressed(KeyEvent event) {
-	    
+
 
 	    char ch = event.getKeyChar();
 
@@ -74,7 +86,7 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 		    for(int y=0; y<216; y++) {
 			for(int z=0; z<216; z++) {
 			    rawRA.setPosition(new int[] {(int)(position.getFloatPosition(0)/2-108)+x, (int)(position.getFloatPosition(1)/2-108)+y, (int)(position.getFloatPosition(2)/2-108)+z});
-			    input.putScalar(new int [] {1,1, x, y, z}, rawRA.get().get());
+			    input.putScalar(new int [] {0,0, x, y, z}, rawRA.get().get());
 			}
 		    }
 		}
@@ -83,7 +95,7 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 		Map<String, INDArray> exec = onnxRuntimeRunner.exec(inputs);
 		INDArray output = exec.get("output");
 		System.out.println(output.shapeInfoToString());
-		
+
 		RandomAccessibleInterval<FloatType> outputImg = ArrayImgs.floats(68,68,68);
 		RandomAccess<FloatType> outputImgRA = outputImg.randomAccess();
 		for(int x=0; x<68; x++) {
@@ -94,15 +106,15 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 			}
 		    }
 		}
-		
+
 		AffineTransform3D t = new AffineTransform3D();
 		System.out.println(position.getDoublePosition(0)+" "+position.getDoublePosition(1)+" "+position.getDoublePosition(2));
 		t.translate(new double[] {position.getDoublePosition(0)-34,position.getDoublePosition(1)-34,position.getDoublePosition(2)-34});
 		final N5Source source = new N5Source<>(
-	        	new UnsignedByteType(),
-	                "raw",
-	                new RandomAccessibleInterval [] {outputImg},
-	                new AffineTransform3D[] {t});
+			new UnsignedByteType(),
+			"raw",
+			new RandomAccessibleInterval [] {outputImg},
+			new AffineTransform3D[] {t});
 
 		//BdvFunctions.show(source);
 		BdvOptions bdvOptions = BdvOptions.options().addTo(bdv);
@@ -159,7 +171,7 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 		Map<String, INDArray> exec = onnxRuntimeRunner.exec(inputs);
 		INDArray output = exec.get("output");
 		System.out.println(output.shapeInfoToString());
-		
+
 		RandomAccessibleInterval<FloatType> outputImg = ArrayImgs.floats(68,68,68);
 		RandomAccess<FloatType> outputImgRA = outputImg.randomAccess();
 		for(int x=0; x<68; x++) {
@@ -170,7 +182,7 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 			}
 		    }
 		}
-		
+
 		AffineTransform3D t = new AffineTransform3D();
 		t.scale(0.5);
 		t.translate(new double[] {position.getDoublePosition(0)-34,position.getDoublePosition(1)-34,position.getDoublePosition(2)-34});
@@ -183,7 +195,7 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 		//BdvFunctions.show(source);
 		BdvOptions bdvOptions = BdvOptions.options().addTo(bdv);
 		BdvFunctions.show(source, bdvOptions);
-		*/
+		 */
 	    }
 	}
     }
@@ -211,29 +223,126 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 	    }
 	}*/
 	String n5path = "/groups/cellmap/cellmap/data/jrc_mus-liver/jrc_mus-liver.n5";
-        final N5Reader n5Reader = new N5FSReader(n5path);
+	final N5Reader n5Reader = new N5FSReader(n5path);
 	final RandomAccessibleInterval<UnsignedByteType> raw = N5Utils.openVolatile(n5Reader,"/volumes/raw/s1");
 
-        final SharedQueue sharedQueue = new SharedQueue( 8 );
-        AffineTransform3D t = new AffineTransform3D();
-        t.scale(2);
-        final N5Source source = new N5Source<>(
-        	new UnsignedByteType(),
-                "raw",
-                new RandomAccessibleInterval [] {raw},
-                new AffineTransform3D[] {t});
+	final SharedQueue sharedQueue = new SharedQueue( 8 );
+	AffineTransform3D t = new AffineTransform3D();
+	t.scale(2);
+	final N5Source source = new N5Source<>(
+		new UnsignedByteType(),
+		"raw",
+		new RandomAccessibleInterval [] {raw},
+		new AffineTransform3D[] {t});
 
-        final N5VolatileSource volatileSource = source.asVolatile(sharedQueue);
+	final N5VolatileSource volatileSource = source.asVolatile(sharedQueue);
 	//t.scale(2);
 	//t.translate(new double[] {50, 50, 50});
 	BdvSource bdv = BdvFunctions.show(volatileSource);//sourceTransform(t));//, Bdv.options().is2D().axisOrder(AxisOrder.XYT));
-	
+
 	//bdv.setDisplayRange(0,1);
 	BdvHandle bdvHandle = bdv.getBdvHandle();
-	//OnnxRuntimeRunner onnxRuntimeRunner = null;
 	OnnxRuntimeRunner onnxRuntimeRunner = loadOnnxModel("/groups/scicompsoft/home/ackermand/Programming/deeplearning4j-examples/python/cellmap_model.onnx");
-	//bdvHandle.getViewerPanel().getDisplay().addMouseMotionListener(new MouseMotionEventDemo(bdv, raw.randomAccess(), onnxRuntimeRunner));
 	bdvHandle.getViewerPanel().getDisplay().addKeyListener(new KeyListenerDemo(bdv, raw.randomAccess(), onnxRuntimeRunner));
+
+	System.out.println("stage 1");
+
+	// create the ImgFactory based on cells (cellsize = 5x5x5...x5) that will
+	// instantiate the Img
+
+	// create an 3d-Img with dimensions 20x30x40 (here cellsize is 5x5x5)Ø
+	//final Img< FloatType > outputImage = imgFactory.create( raw.dimensionsAsLongArray() );
+	System.out.println("stage 2");
+	//OnnxRuntimeRunner onnxRuntimeRunner = loadOnnxModel("/groups/scicompsoft/home/ackermand/Programming/deeplearning4j-examples/python/cellmap_model.onnx");
+	final RandomAccessibleInterval<UnsignedByteType> prediction = Lazy.generate(
+		Intervals.createMinSize(0, raw.min(0)*2,raw.min(1)*2,raw.min(2)*2,
+			14,raw.dimension(0)*2, raw.dimension(1)*2, raw.dimension(2)*2),
+
+		//Intervals.createMinSize(0,0,0, 68,68,68),
+		new int[] {14, 68, 68, 68},
+		new UnsignedByteType(0),
+		AccessFlags.setOf(AccessFlags.VOLATILE),
+		c->{
+		    System.out.println(Intervals.toString(c));
+		    INDArray input = Nd4j.zeros(1, 1, 216, 216, 216);
+		    IntervalView<UnsignedByteType> rawInputBlock = Views.offsetInterval(
+			    Views.extendZero(raw),
+			    new long[] {c.min(1)/2-91,c.min(2)/2-91,c.min(3)/2-91},
+			    new long[] {216, 216, 216});
+		    int i=0;
+		    System.out.println(Intervals.toString(rawInputBlock));
+		    /*for(UnsignedByteType pixel: rawInputBlock) {
+			input.putScalar(i, pixel.get());
+			i++;
+		    }*/
+
+		    RandomAccess<UnsignedByteType> ra = rawInputBlock.randomAccess();
+		    for(int x=0; x<216; x++) {
+			for(int y=0; y<216; y++) {
+			    for(int z=0; z<216; z++) {
+				ra.setPosition(new int[] {x,y,z});
+				input.putScalar(new int[] {0,0,x,y,z}, ra.get().get() );
+			    }
+			}
+		    }
+		    Map<String,INDArray> inputs = new LinkedHashMap<>();
+		    inputs.put("input",input);
+		    Map<String, INDArray> exec = onnxRuntimeRunner.exec(inputs);
+		    INDArray output = exec.get("output");
+
+		    i = 0;
+		    /*for(FloatType pixel: Views.iterable(c)) {
+			pixel.set( 255);//output.getFloat(i) );
+			System.out.println(i + " " + output.getFloat(i));
+			i++;
+		    }
+		    System.out.println(i);
+		     */
+
+		    RandomAccess<UnsignedByteType> cRA = c.randomAccess();
+		    //RandomAccessibleInterval<FloatType> outputImg = ArrayImgs.floats(68,68,68);
+
+		    for(int x=0; x<68; x++) {
+			for(int y=0; y<68; y++) {
+			    for(int z=0; z<68; z++) {
+				for(int channel=0; channel<13; channel++) {
+				    cRA.setPosition(new int[] {channel, (int) (c.min(1)+x),(int) (c.min(2)+y),(int) (c.min(3)+z)});
+				    float currentValue = output.getFloat(0,channel,x,y,z);
+				    currentValue = currentValue < -1 ? -1 : currentValue;
+				    currentValue = currentValue > 1 ? 1 : currentValue;
+				    cRA.get().set((int)(currentValue*127.5+127.5));
+				}
+				//ra.setPosition(new int[] {x,y,z});
+				//input.putScalar(new int[] {1,1,x,y,z}, ra.get().get() );
+				//System.out.println(output.getFloat(0,2,x,y,z));
+			    }
+			}
+		    }
+		});
+	System.out.println("stage 3");
+
+	BdvOptions bdvOptions = BdvOptions.options().addTo(bdv);
+	List<String> prediction_classes = Arrays.asList("ecs",
+		    "plasma_membrane",
+		    "mito",
+		    "mito_membrane",
+		    "vesicle",
+		    "vesicle_membrane",
+		    "mvb",
+		    "mvb_membrane",
+		    "er",
+		    "er_membrane",
+		    "eres",
+		    "nucleus",
+		    "microtubules",
+		    "microtubules_out");
+
+	for(int i=0; i<prediction_classes.size(); i++) {
+	   BdvFunctions.show(Views.hyperSlice(VolatileViews.wrapAsVolatile(prediction, sharedQueue), 0, i), prediction_classes.get(i), bdvOptions);//, bdvOptions);
+	}
+	//BdvFunctions.show(VolatileViews.wrapAsVolatile(prediction, sharedQueue), "prediction", bdvOptions);
+	//bdv.setDisplayRange(127,127);
+	System.out.println("stage 4");
 
     }
 }

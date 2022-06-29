@@ -53,7 +53,7 @@ import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-public class Interactive < T extends NumericType< T >, V extends NumericType<V> >{
+public class InteractiveInference < T extends NumericType< T >, V extends NumericType<V> >{
 
     static boolean draw = false;
     static class KeyListenerDemo extends KeyAdapter {
@@ -254,6 +254,7 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 	//final Img< FloatType > outputImage = imgFactory.create( raw.dimensionsAsLongArray() );
 	System.out.println("stage 2");
 	//OnnxRuntimeRunner onnxRuntimeRunner = loadOnnxModel("/groups/scicompsoft/home/ackermand/Programming/deeplearning4j-examples/python/cellmap_model.onnx");
+	INDArray temp = Nd4j.zeros(1, 1, 216, 216, 216);
 	final RandomAccessibleInterval<UnsignedByteType> prediction = Lazy.generate(
 		Intervals.createMinSize(0, raw.min(0)*2,raw.min(1)*2,raw.min(2)*2,
 			14,raw.dimension(0)*2, raw.dimension(1)*2, raw.dimension(2)*2),
@@ -263,14 +264,14 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 		new UnsignedByteType(0),
 		AccessFlags.setOf(AccessFlags.VOLATILE),
 		c->{
-		    System.out.println(Intervals.toString(c));
+		    //System.out.println(Intervals.toString(c));
 		    INDArray input = Nd4j.zeros(1, 1, 216, 216, 216);
 		    IntervalView<UnsignedByteType> rawInputBlock = Views.offsetInterval(
 			    Views.extendZero(raw),
 			    new long[] {c.min(1)/2-91,c.min(2)/2-91,c.min(3)/2-91},
 			    new long[] {216, 216, 216});
 		    int i=0;
-		    System.out.println(Intervals.toString(rawInputBlock));
+		    //System.out.println(Intervals.toString(rawInputBlock));
 		    /*for(UnsignedByteType pixel: rawInputBlock) {
 			input.putScalar(i, pixel.get());
 			i++;
@@ -287,9 +288,14 @@ public class Interactive < T extends NumericType< T >, V extends NumericType<V> 
 		    }
 		    Map<String,INDArray> inputs = new LinkedHashMap<>();
 		    inputs.put("input",input);
+		    long startTime = System.nanoTime();
+		   
 		    Map<String, INDArray> exec = onnxRuntimeRunner.exec(inputs);
 		    INDArray output = exec.get("output");
+		    long endTime = System.nanoTime();
 
+		    long duration = (endTime - startTime);  //divide by 1000000 to get milliseconds.
+		    System.out.println("Time "+duration/1000000.0);
 		    i = 0;
 		    /*for(FloatType pixel: Views.iterable(c)) {
 			pixel.set( 255);//output.getFloat(i) );

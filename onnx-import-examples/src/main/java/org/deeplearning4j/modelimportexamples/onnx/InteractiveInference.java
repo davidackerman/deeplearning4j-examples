@@ -246,7 +246,21 @@ public class InteractiveInference < T extends NumericType< T >, V extends Numeri
 	bdvHandle.getViewerPanel().getDisplay().addKeyListener(new KeyListenerDemo(bdv, raw.randomAccess(), onnxRuntimeRunner));
 
 	System.out.println("stage 1");
-
+	List<String> prediction_classes = Arrays.asList("ecs",
+		    "plasma_membrane",
+		    "mito",
+		    "mito_membrane",
+		    "vesicle",
+		    "vesicle_membrane",
+		    "mvb",
+		    "mvb_membrane",
+		    "er",
+		    "er_membrane",
+		    "eres",
+		    "nucleus",
+		    "microtubules",
+		    "microtubules_out");
+	final int num_classes = 1; //prediction_classes.size();
 	// create the ImgFactory based on cells (cellsize = 5x5x5...x5) that will
 	// instantiate the Img
 
@@ -257,10 +271,10 @@ public class InteractiveInference < T extends NumericType< T >, V extends Numeri
 	INDArray temp = Nd4j.zeros(1, 1, 216, 216, 216);
 	final RandomAccessibleInterval<UnsignedByteType> prediction = Lazy.generate(
 		Intervals.createMinSize(0, raw.min(0)*2,raw.min(1)*2,raw.min(2)*2,
-			14,raw.dimension(0)*2, raw.dimension(1)*2, raw.dimension(2)*2),
+			num_classes,raw.dimension(0)*2, raw.dimension(1)*2, raw.dimension(2)*2),
 
 		//Intervals.createMinSize(0,0,0, 68,68,68),
-		new int[] {14, 68, 68, 68},
+		new int[] {num_classes, 68, 68, 68},
 		new UnsignedByteType(0),
 		AccessFlags.setOf(AccessFlags.VOLATILE),
 		c->{
@@ -311,7 +325,7 @@ public class InteractiveInference < T extends NumericType< T >, V extends Numeri
 		    for(int x=0; x<68; x++) {
 			for(int y=0; y<68; y++) {
 			    for(int z=0; z<68; z++) {
-				for(int channel=0; channel<13; channel++) {
+				for(int channel=0; channel<num_classes; channel++) {
 				    cRA.setPosition(new int[] {channel, (int) (c.min(1)+x),(int) (c.min(2)+y),(int) (c.min(3)+z)});
 				    float currentValue = output.getFloat(0,channel,x,y,z);
 				    currentValue = currentValue < -1 ? -1 : currentValue;
@@ -328,22 +342,9 @@ public class InteractiveInference < T extends NumericType< T >, V extends Numeri
 	System.out.println("stage 3");
 
 	BdvOptions bdvOptions = BdvOptions.options().addTo(bdv);
-	List<String> prediction_classes = Arrays.asList("ecs",
-		    "plasma_membrane",
-		    "mito",
-		    "mito_membrane",
-		    "vesicle",
-		    "vesicle_membrane",
-		    "mvb",
-		    "mvb_membrane",
-		    "er",
-		    "er_membrane",
-		    "eres",
-		    "nucleus",
-		    "microtubules",
-		    "microtubules_out");
+	
 
-	for(int i=0; i<prediction_classes.size(); i++) {
+	for(int i=0; i<num_classes; i++) {
 	   BdvFunctions.show(Views.hyperSlice(VolatileViews.wrapAsVolatile(prediction, sharedQueue), 0, i), prediction_classes.get(i), bdvOptions);//, bdvOptions);
 	}
 	//BdvFunctions.show(VolatileViews.wrapAsVolatile(prediction, sharedQueue), "prediction", bdvOptions);
